@@ -6,7 +6,6 @@ A symmetric-key block cipher using Substitution-Permutation Network (SPN) design
 
 ```bash
 g++ -std=c++17 -O3 -march=native -I include -o lofer src/main.cpp
-g++ -std=c++17 -O3 -march=native -I include -o test_runner src/test.cpp
 ```
 
 ## Usage
