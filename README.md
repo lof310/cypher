@@ -1,67 +1,77 @@
 # Lofer Cipher
 
-A symmetric-key block cipher implementation using a Substitution-Permutation Network (SPN) design.
+A symmetric-key block cipher using Substitution-Permutation Network (SPN) design.
 
-## Overview
+## Build & Run
 
-Lofer is a custom cipher that combines:
-- **Key-dependent S-boxes**: Generated using Fisher-Yates shuffle for bijective substitution
-- **Affine permutations**: Position-based diffusion layer
-- **Multiple rounds**: Variable round count derived from the password
-
-## Features
-
-- Byte-oriented operation (8-bit elements)
-- Salt-based key derivation for semantic security
-- Variable round count (8-32 rounds)
-- Bijective S-boxes ensuring perfect decryption
+```bash
+g++ -std=c++17 -O3 -march=native -I include -o lofer src/main.cpp
+g++ -std=c++17 -O3 -march=native -I include -o test_runner src/test.cpp
+```
 
 ## Usage
 
-### Command Line
-
 ```bash
-# Encrypt a file
-./lofer -e input.txt -o encrypted.bin -p "your_password"
+# Basic encrypt/decrypt
+./lofer -e input.txt -p "password"
+./lofer -d input.txt.enc -p "password"
 
-# Decrypt a file
-./lofer -d encrypted.bin -o decrypted.txt -p "your_password"
+# With options
+./lofer -e data.bin --rounds 24 --hash sha512 --iterations 200000 -p "password"
+./lofer -D ./docs -r -p "password"  # Process directory recursively
+
+# Show all options
+./lofer --help
 ```
 
-### Options
+### Command-line Options
 
 | Option | Description |
 |--------|-------------|
-| `-e <file>` | Encrypt the specified file |
-| `-d <file>` | Decrypt the specified file |
-| `-o <output>` | Output file path |
-| `-p <password>` | Encryption/decryption password |
-| `-h` | Show help message |
+| `-e <file>` | Encrypt file |
+| `-d <file>` | Decrypt file |
+| `-o <output>` | Output path |
+| `-D <dir>` | Process directory |
+| `-r` | Recursive mode |
+| `-p <password>` | Password (prompts if omitted) |
+| `--rounds <N>` | SPN rounds: 8-32 (default: 16) |
+| `--hash <type>` | sha256 or sha512 (default: sha256) |
+| `--iterations <N>` | PBKDF2 iterations (default: 100000) |
+| `--no-auth` | Disable HMAC (not recommended) |
 
-## Algorithm Parameters
+## API Usage
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| SALT_LEN | 16 bytes | Random salt for key derivation |
-| R_MIN | 8 | Minimum number of rounds |
-| R_MAX | 32 | Maximum number of rounds |
-| M | 256 | Alphabet size (2^8 for bytes) |
+```cpp
+#include "cipher.hpp"
+using namespace lofer;
 
-## Building
+// Default configuration
+auto encrypted = encrypt(plaintext, password);
+auto decrypted = decrypt(encrypted, password);
 
-```bash
-g++ -std=c++17 -O2 -o lofer lofer.cpp
-g++ -std=c++17 -O2 -o test_runner test.cpp
+// Custom configuration
+CipherConfig config;
+config.hashAlgo = HashAlgorithm::SHA512;
+config.numRounds = 24;
+config.pbkdf2Iterations = 200000;
+config.useAuthentication = true;
+
+auto encrypted = encrypt(plaintext, password, config);
 ```
+
+## Algorithm
+
+1. Generate random 16-byte salt
+2. Derive keys via PBKDF2-HMAC-SHA256/512
+3. For each round: S-box substitution → affine permutation
+4. Compute HMAC over ciphertext (Encrypt-then-MAC)
+5. Output: `salt || ciphertext || HMAC`
 
 ## File Format
 
-Encrypted files have the following structure:
-
 ```
-+---------------------+-------------------+
-| Salt (16 bytes)     | Ciphertext (L bytes) |
-+---------------------+-------------------+
++----------+------------+----------+
+| Salt     | Ciphertext | HMAC     |
+| 16 bytes | L bytes    | 32 bytes |
++----------+------------+----------+
 ```
-
-Where L is the plaintext length in bytes.
