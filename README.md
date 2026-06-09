@@ -2,6 +2,8 @@
 
 A symmetric-key block cipher using Substitution-Permutation Network (SPN) design.
 
+**EDUCATIONAL USE ONLY**
+
 ## Build & Run
 
 ```bash
